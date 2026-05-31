@@ -3,60 +3,46 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>AI HomeLab | Vagner</title>
+    <title>AI HomeLab | Vagner — Memória</title>
     <link rel="stylesheet" href="style.css">
-    <link rel="preconnect" href="https://fonts.googleapis.com">
-    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
     <link href="https://fonts.googleapis.com/css2?family=Fira+Code:wght@300;400;500&family=Inter:wght@300;400;600&display=swap" rel="stylesheet">
 </head>
 <body>
-    <div class="app-container">
-        <header>
-            <div class="logo-container">
-                <div class="status-indicator"></div>
-                <h1>HomeLab de IA <span class="vagner-tag">do Vagner</span></h1>
-            </div>
-            <div class="header-actions">
-                <span class="system-time" id="system-time">00:00:00</span>
-            </div>
-        </header>
-
-        <main id="chat-container">
-            <!-- Mensagens serão inseridas aqui via JS -->
-            <div class="message ai-message">
-                <div class="bubble">
-                    <p>Olá, Vagner! Sistema inicializado. Como posso ajudar no seu laboratório hoje?</p>
-                </div>
-            </div>
-        </main>
-
-        <div class="loading-indicator" id="loading-indicator">
-            <div class="dot-typing"></div>
+<div class="app-container">
+    <header>
+        <div class="logo-container">
+            <div class="status-indicator"></div>
+            <h1>HomeLab de IA <span class="vagner-tag">feat/02 · memória</span></h1>
         </div>
-
-        <footer>
-            <form id="chat-form">
-                <input type="text" id="user-input" placeholder="Digite sua consulta ao Ollama..." autocomplete="off">
-                <button type="submit" id="send-btn">
-                    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><line x1="22" y1="2" x2="11" y2="13"></line><polygon points="22 2 15 22 11 13 2 9 22 2"></polygon></svg>
-                </button>
-            </form>
-            <div class="meta-bar">
-                <div class="meta-item">
-                    <span class="label">MODELO:</span>
-                    <span id="model-name">--</span>
-                </div>
-                <div class="meta-item">
-                    <span class="label">TOKENS:</span>
-                    <span id="token-usage">0</span>
-                </div>
-                <div class="meta-item">
-                    <span class="label">STATUS:</span>
-                    <span id="system-status">READY</span>
-                </div>
-            </div>
-        </footer>
+        <div class="header-actions">
+            <button id="clear-btn" class="clear-btn">↺ Nova conversa</button>
+            <span class="system-time" id="system-time">00:00:00</span>
+        </div>
+    </header>
+    <div class="session-bar">
+        <span class="label">SESSION ID:</span>
+        <span id="session-id-display" class="session-id">—</span>
     </div>
-    <script src="app.js"></script>
+    <main id="chat-container">
+        <div class="message ai-message">
+            <div class="bubble">Olá! Agora tenho memória. Me conte seu nome e depois pergunte qual é!</div>
+        </div>
+    </main>
+    <div class="loading-indicator" id="loading-indicator"><div class="dot-typing"></div></div>
+    <footer>
+        <form id="chat-form">
+            <input type="text" id="user-input" placeholder="Digite sua mensagem..." autocomplete="off">
+            <button type="submit" id="send-btn">
+                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><line x1="22" y1="2" x2="11" y2="13"></line><polygon points="22 2 15 22 11 13 2 9 22 2"></polygon></svg>
+            </button>
+        </form>
+        <div class="meta-bar">
+            <div class="meta-item"><span class="label">MODELO:</span><span id="model-name">--</span></div>
+            <div class="meta-item"><span class="label">TOKENS:</span><span id="token-usage">0</span></div>
+            <div class="meta-item"><span class="label">STATUS:</span><span id="system-status">READY</span></div>
+        </div>
+    </footer>
+</div>
+<script src="app.js"></script>
 </body>
 </html>
