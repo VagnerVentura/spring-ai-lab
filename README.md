@@ -1,45 +1,77 @@
 # 🤖 Spring AI Intro — Portfólio de IA com Java
 
-Projeto introdutório de integração com LLMs usando **Spring Boot + Spring AI + Anthropic Claude**.
+Projeto introdutório de integração com LLMs usando **Spring Boot + Spring AI + Ollama**.
+
+O objetivo deste projeto é explorar os conceitos fundamentais de aplicações de IA Generativa em Java, utilizando modelos locais executados através do Ollama e integrados ao Spring AI.
 
 ---
 
 ## 📚 Conceitos abordados neste projeto
 
-| Conceito | Onde ver no código |
-|---|---|
-| **API Key / autenticação** | `application.properties` |
-| **System prompt** | `ChatService.java` — `SystemMessage` |
-| **Tokens** | `ChatController.java` — `getTotalTokens()` |
-| **Temperatura** | `application.properties` — `temperature` |
-| **ChatModel / LLM call** | `ChatService.java` — `chatModel.call(prompt)` |
-| **Prompt structure** | `ChatService.java` — `Prompt(List.of(...))` |
+| Conceito                 | Onde ver no código                         |
+| ------------------------ | ------------------------------------------ |
+| **LLM Local**            | Ollama + modelo Qwen/Gemma                 |
+| **Prompt Engineering**   | `ChatService.java`                         |
+| **System Prompt**        | `ChatService.java` — `SystemMessage`       |
+| **Tokens**               | `ChatController.java` — `getTotalTokens()` |
+| **Temperatura**          | `application.properties`                   |
+| **ChatModel / LLM Call** | `ChatService.java`                         |
+| **Prompt Structure**     | `Prompt(List.of(...))`                     |
+| **Spring AI**            | Integração entre aplicação e modelo        |
 
 ---
 
 ## 🚀 Como rodar
 
 ### 1. Pré-requisitos
-- Java 21+
-- Maven 3.9+
-- Conta na [Anthropic Console](https://console.anthropic.com) (plano gratuito disponível)
 
-### 2. Obter a API Key
-Acesse https://console.anthropic.com → API Keys → Create Key
+* Java 21+
+* Maven 3.9+
+* Docker Desktop
+* 8 GB de RAM (mínimo recomendado)
 
-### 3. Configurar a chave de ambiente
+---
 
-**Linux / macOS:**
-```bash
-export ANTHROPIC_API_KEY=sk-ant-sua-chave-aqui
-```
+### 2. Subir o Ollama via Docker
 
 **Windows (PowerShell):**
+
 ```powershell
-$env:ANTHROPIC_API_KEY="sk-ant-sua-chave-aqui"
+docker run -d --name ollama -p 11434:11434 -v ollama:/root/.ollama ollama/ollama
 ```
 
-### 4. Rodar o projeto
+Verifique se o container está ativo:
+
+```powershell
+docker ps
+```
+
+---
+
+### 3. Baixar um modelo
+
+Modelo recomendado para máquinas mais simples:
+
+```powershell
+docker exec -it ollama ollama pull qwen2.5:1.5b
+```
+
+Alternativa:
+
+```powershell
+docker exec -it ollama ollama pull gemma2:2b
+```
+
+Listar modelos instalados:
+
+```powershell
+docker exec -it ollama ollama list
+```
+
+---
+
+### 4. Rodar a aplicação
+
 ```bash
 mvn spring-boot:run
 ```
@@ -48,29 +80,45 @@ mvn spring-boot:run
 
 ## 🧪 Testando os endpoints
 
-### Teste rápido (browser ou curl)
+### Teste rápido
+
 ```bash
 curl http://localhost:8080/api/chat/hello
 ```
 
-### Pergunta via GET (fácil de testar no browser)
+---
+
+### Pergunta via GET
+
 ```bash
-curl "http://localhost:8080/api/chat?message=o que é um context window?"
+curl "http://localhost:8080/api/chat?message=o que é Spring AI?"
 ```
 
-### Pergunta completa via POST (retorna metadados)
+Ou diretamente no navegador:
+
+```text
+http://localhost:8080/api/chat?message=o%20que%20%C3%A9%20Spring%20AI
+```
+
+---
+
+### Pergunta via POST
+
 ```bash
 curl -X POST http://localhost:8080/api/chat \
-  -H "Content-Type: application/json" \
-  -d '{"message": "Explique records em Java 21 com um exemplo"}'
+-H "Content-Type: application/json" \
+-d '{"message":"Explique records em Java 21"}'
 ```
 
-**Resposta esperada:**
+---
+
+### Exemplo de resposta
+
 ```json
 {
-  "response": "Records em Java 21 são...",
-  "model": "claude-3-5-haiku-20241022",
-  "tokensUsed": 312
+  "response": "Records são classes imutáveis introduzidas no Java...",
+  "model": "qwen2.5:1.5b",
+  "tokensUsed": 145
 }
 ```
 
@@ -78,49 +126,104 @@ curl -X POST http://localhost:8080/api/chat \
 
 ## 📁 Estrutura do projeto
 
-```
+```text
 src/main/java/com/portfolio/aiintro/
-├── AiIntroApplication.java        # Entry point
+├── AiIntroApplication.java
 ├── controller/
-│   ├── ChatController.java        # Endpoints REST
-│   ├── ChatRequest.java           # DTO entrada
-│   └── ChatResponse.java          # DTO saída
+│   ├── ChatController.java
+│   ├── ChatRequest.java
+│   └── ChatResponse.java
 └── service/
-    └── ChatService.java           # Lógica de chamada ao modelo
+    └── ChatService.java
 ```
 
 ---
 
-## ⚙️ Parâmetros importantes (application.properties)
+## ⚙️ Configuração do Ollama
+
+### application.properties
 
 ```properties
-# Modelo — opções Anthropic:
-# claude-3-5-haiku-20241022   → mais rápido e barato (ideal para testes)
-# claude-3-5-sonnet-20241022  → mais capaz
-spring.ai.anthropic.chat.model=claude-3-5-haiku-20241022
+spring.application.name=ai-intro
 
-# Temperatura: 0.0 (determinístico) → 1.0 (mais criativo)
-spring.ai.anthropic.chat.options.temperature=0.7
+server.port=8080
 
-# Tamanho máximo da resposta em tokens (~750 palavras por 1000 tokens)
-spring.ai.anthropic.chat.options.max-tokens=1024
+spring.ai.ollama.base-url=http://localhost:11434
+
+spring.ai.ollama.chat.model=qwen2.5:1.5b
+
+spring.ai.ollama.chat.options.temperature=0.7
+
+logging.level.org.springframework.ai=DEBUG
 ```
 
 ---
 
-## 🗺️ Próximos passos (evolução do projeto)
+## 🏗️ Arquitetura
 
-- [ ] **Memória de conversa** — adicionar `ChatMemory` para manter histórico
-- [ ] **Streaming** — devolver a resposta token a token com `StreamingChatModel`
-- [ ] **RAG básico** — carregar um arquivo `.txt` e perguntar sobre ele
-- [ ] **System prompt dinâmico** — receber persona via parâmetro da requisição
-- [ ] **Múltiplos modelos** — comparar respostas de Claude vs OpenAI
-- [ ] **Testes** — unit test do service mockando o `ChatModel`
+```text
+Cliente (Browser/Postman)
+            │
+            ▼
+      Spring Boot
+            │
+            ▼
+       Spring AI
+            │
+            ▼
+  Ollama (localhost:11434)
+            │
+            ▼
+      Modelo Local
+    (Qwen / Gemma)
+```
+
+---
+
+## 🎯 Objetivos de aprendizado
+
+Este projeto foi criado para praticar:
+
+* Integração com LLMs usando Spring AI
+* Engenharia de Prompts
+* Consumo de modelos locais
+* Estruturação de APIs REST para IA
+* Conceitos de IA Generativa
+* Preparação para projetos de RAG e Agentes
+
+---
+
+## 🗺️ Próximos passos
+
+* [ ] Memória de conversa com ChatMemory
+* [ ] Streaming de respostas
+* [ ] RAG com documentos PDF/TXT
+* [ ] Tool Calling
+* [ ] Function Calling
+* [ ] Agente para consulta de APIs externas
+* [ ] Vetorização e banco vetorial
+* [ ] Comparação entre Ollama, OpenAI e Gemini
+* [ ] Testes unitários com mock do ChatModel
+
+---
+
+## 💡 Por que Ollama?
+
+* Gratuito
+* Sem API Key
+* Sem cobrança por uso
+* Funciona offline
+* Ideal para estudos e portfólio
+* Fácil integração com Spring AI
 
 ---
 
 ## 🔗 Referências
 
-- [Spring AI Docs](https://docs.spring.io/spring-ai/reference/)
-- [Anthropic API Docs](https://docs.anthropic.com)
-- [Spring AI GitHub](https://github.com/spring-projects/spring-ai)
+* Spring AI Documentation
+* Ollama Documentation
+* Spring AI GitHub
+* Ollama GitHub
+
+```
+```
