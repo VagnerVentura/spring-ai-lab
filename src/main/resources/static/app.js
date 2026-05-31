@@ -1,92 +1,91 @@
 document.addEventListener('DOMContentLoaded', () => {
-    const chatForm = document.getElementById('chat-form');
-    const userInput = document.getElementById('user-input');
-    const chatContainer = document.getElementById('chat-container');
-    const loadingIndicator = document.getElementById('loading-indicator');
-    const modelNameEl = document.getElementById('model-name');
-    const tokenUsageEl = document.getElementById('token-usage');
-    const systemStatusEl = document.getElementById('system-status');
-    const systemTimeEl = document.getElementById('system-time');
+    const chatForm        = document.getElementById('chat-form');
+    const userInput       = document.getElementById('user-input');
+    const chatContainer   = document.getElementById('chat-container');
+    const loadingEl       = document.getElementById('loading-indicator');
+    const modelNameEl     = document.getElementById('model-name');
+    const tokenUsageEl    = document.getElementById('token-usage');
+    const systemStatusEl  = document.getElementById('system-status');
+    const systemTimeEl    = document.getElementById('system-time');
+    const sessionIdEl     = document.getElementById('session-id-display');
+    const clearBtn        = document.getElementById('clear-btn');
 
-    // Atualiza relógio do sistema
+    // conversationId é mantido no frontend entre mensagens
+    // null = deixa o backend gerar um UUID na primeira mensagem
+    let conversationId = null;
+
     setInterval(() => {
-        const now = new Date();
-        systemTimeEl.textContent = now.toLocaleTimeString('pt-BR');
+        systemTimeEl.textContent = new Date().toLocaleTimeString('pt-BR');
     }, 1000);
 
     chatForm.addEventListener('submit', async (e) => {
         e.preventDefault();
-        
         const message = userInput.value.trim();
         if (!message) return;
 
-        // Limpa input e adiciona mensagem do usuário
         userInput.value = '';
         addMessage(message, 'user');
-        
-        // Inicia carregamento
         setLoading(true);
 
         try {
-            const response = await fetch('/api/chat', {
+            const res = await fetch('/api/chat', {
                 method: 'POST',
-                headers: {
-                    'Content-Type': 'application/json'
-                },
-                body: JSON.stringify({ message })
+                headers: { 'Content-Type': 'application/json' },
+                // Envia o conversationId atual (null na primeira mensagem)
+                body: JSON.stringify({ message, conversationId })
             });
 
-            if (!response.ok) throw new Error('Falha na comunicação com o laboratório.');
+            if (!res.ok) throw new Error('Falha na comunicação.');
+            const data = await res.json();
 
-            const data = await response.json();
-            
-            // Adiciona resposta da IA
+            // Persiste o conversationId para as próximas mensagens
+            conversationId = data.conversationId;
+            sessionIdEl.textContent = conversationId;
+
             addMessage(data.response, 'ai');
-            
-            // Atualiza metadados
-            modelNameEl.textContent = data.model;
+            modelNameEl.textContent  = data.model;
             tokenUsageEl.textContent = data.tokensUsed;
-            systemStatusEl.textContent = 'ONLINE';
-            systemStatusEl.style.color = '#238636';
+            setStatus('ONLINE', '#238636');
 
-        } catch (error) {
-            console.error('Error:', error);
-            addMessage('ERRO: ' + error.message, 'ai');
-            systemStatusEl.textContent = 'ERROR';
-            systemStatusEl.style.color = '#f85149';
+        } catch (err) {
+            addMessage('ERRO: ' + err.message, 'ai');
+            setStatus('ERROR', '#f85149');
         } finally {
             setLoading(false);
         }
     });
 
+    // Limpa a memória no backend e reinicia a sessão no frontend
+    clearBtn.addEventListener('click', async () => {
+        if (!conversationId) return;
+        await fetch(`/api/chat/${conversationId}`, { method: 'DELETE' });
+        conversationId = null;
+        sessionIdEl.textContent = '—';
+        chatContainer.innerHTML = '';
+        addMessage('Memória limpa. Nova conversa iniciada!', 'ai');
+    });
+
     function addMessage(text, sender) {
-        const messageDiv = document.createElement('div');
-        messageDiv.classList.add('message', `${sender}-message`);
-        
-        const bubbleDiv = document.createElement('div');
-        bubbleDiv.classList.add('bubble');
-        
-        const p = document.createElement('p');
-        p.textContent = text;
-        
-        bubbleDiv.appendChild(p);
-        messageDiv.appendChild(bubbleDiv);
-        chatContainer.appendChild(messageDiv);
-        
-        // Auto-scroll para o final
+        const div = document.createElement('div');
+        div.classList.add('message', `${sender}-message`);
+        const bubble = document.createElement('div');
+        bubble.classList.add('bubble');
+        bubble.textContent = text;
+        div.appendChild(bubble);
+        chatContainer.appendChild(div);
         chatContainer.scrollTop = chatContainer.scrollHeight;
     }
 
-    function setLoading(isLoading) {
-        loadingIndicator.style.display = isLoading ? 'block' : 'none';
-        userInput.disabled = isLoading;
-        document.getElementById('send-btn').disabled = isLoading;
-        
-        if (isLoading) {
-            systemStatusEl.textContent = 'PROCESSING';
-            systemStatusEl.style.color = '#e3b341';
-        }
-        
+    function setLoading(on) {
+        loadingEl.style.display = on ? 'block' : 'none';
+        userInput.disabled = on;
+        document.getElementById('send-btn').disabled = on;
+        if (on) setStatus('PROCESSING', '#e3b341');
         chatContainer.scrollTop = chatContainer.scrollHeight;
+    }
+
+    function setStatus(text, color) {
+        systemStatusEl.textContent = text;
+        systemStatusEl.style.color = color;
     }
 });
