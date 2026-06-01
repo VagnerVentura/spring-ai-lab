@@ -6,30 +6,32 @@ import org.springframework.ai.chat.memory.ChatMemory;
 import org.springframework.ai.chat.model.ChatResponse;
 import org.springframework.ai.ollama.OllamaChatModel;
 import org.springframework.stereotype.Service;
+import reactor.core.publisher.Flux;
 
 import java.lang.management.MemoryManagerMXBean;
 
 /**
  * ╔══════════════════════════════════════════════════════════════╗
- * ║  MUDANÇAS neste branch vs feat/01-chat-basico                ║
+ * ║  MUDANÇAS neste branch vs feat/02-chat-memory                ║
  * ╠══════════════════════════════════════════════════════════════╣
- * ║  ANTES: usávamos OllamaChatModel diretamente                 ║
- * ║  AGORA: usamos ChatClient — API fluente do Spring AI         ║
+ * ║  ANTES: .call() → aguarda resposta completa (bloqueante)     ║
+ * ║  AGORA: .stream() → devolve Flux<String> token a token       ║
  * ║                                                              ║
- * ║  ChatClient é o "builder" do Spring AI. Permite encadear:    ║
- * ║  - system()     → system prompt                              ║
- * ║  - user()       → mensagem do usuário                        ║
- * ║  - advisors()   → middlewares (memória, logging, RAG...)     ║
- * ║  - call()       → executa e retorna resposta                 ║
+ * ║  O que é Streaming?                                          ║
+ * ║  Em vez de esperar o modelo gerar TODA a resposta para       ║
+ * ║  devolver, enviamos cada token (palavra/pedaço) assim que    ║
+ * ║  fica pronto. O resultado é o efeito "digitando" do ChatGPT. ║
  * ║                                                              ║
- * ║  MessageChatMemoryAdvisor é o "middleware de memória":       ║
- * ║  → intercepta cada chamada                                   ║
- * ║  → injeta o histórico da conversa no prompt                  ║
- * ║  → salva a nova mensagem + resposta na memória               ║
+ * ║  Tecnologia usada: Server-Sent Events (SSE)                  ║
+ * ║  → protocolo HTTP unidirecional (servidor → cliente)         ║
+ * ║  → suportado nativamente pelo browser via EventSource        ║
+ * ║  → Spring usa MediaType.TEXT_EVENT_STREAM_VALUE              ║
  * ║                                                              ║
- * ║  Tudo isso transparente — você só passa o conversationId!    ║
+ * ║  Stack reativa: Spring WebFlux + Project Reactor             ║
+ * ║  → Flux<T> = stream assíncrono de N elementos                ║
+ * ║  → Mono<T> = stream assíncrono de 0 ou 1 elemento            ║
  * ╚══════════════════════════════════════════════════════════════╝
- */
+ **/
 @Service
 public class ChatService {
 
@@ -80,6 +82,42 @@ public class ChatService {
                 //                                              do seu modelo
                 .call()
                 .chatResponse();
+    }
+
+    /**
+     * ╔══════════════════════════════════════════════════════╗
+     * ║  NOVO: Chat com Streaming + Memória                  ║
+     * ╚══════════════════════════════════════════════════════╝
+     *
+     * Retorna um Flux<String> onde cada elemento é um fragmento
+     * de texto (token) emitido pelo modelo em tempo real.
+     *
+     * A única diferença para o chat normal:
+     *   .call()   → ChatResponse (bloqueia até terminar)
+     *   .stream() → Flux<ChatResponse> (emite a cada token)
+     *
+     * O .map() extrai apenas o texto de cada fragmento.
+     * O .filter() remove tokens nulos que o modelo às vezes emite.
+     *
+     * @param userMessage    mensagem do usuário
+     * @param conversationId chave da sessão para memória
+     * @return stream de tokens em tempo real
+     */
+
+    public Flux<String> chatStream(String userMessage, String conversationId) {
+        return chatClient.prompt()
+                .user(userMessage)
+                .advisors(
+                        MessageChatMemoryAdvisor
+                                .builder(chatMemory)
+                                .conversationId(conversationId)
+                                .build()
+                ).stream()
+                .chatResponse()
+                .map(response -> response.getResult()
+                        .getOutput()
+                        .getText()
+                ).filter( text -> text != null && !text.isEmpty());
     }
 
     /**
