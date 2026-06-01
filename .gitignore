@@ -1,0 +1,24 @@
+# Maven
+target/
+*.class
+*.jar
+*.war
+
+# IDE
+.idea/
+.vscode/
+*.iml
+*.iws
+*.ipr
+.project
+.classpath
+.settings/
+
+# Segurança — NUNCA commitar chaves!
+.env
+application-local.properties
+*.key
+
+# SO
+.DS_Store
+Thumbs.db

@@ -1,71 +1,58 @@
-# feat/02 — Memória de Conversa com ChatMemory
+# feat/03 — Streaming de Respostas com SSE
 
-> Branch anterior: `feat/01-chat-basico` → **este branch**: `feat/02-chat-memory`
+> Branch anterior: `feat/02-chat-memory` → **este branch**: `feat/03-streaming`
 
 ---
 
-## 🧠 O que foi adicionado
+## ⚡ O que foi adicionado
 
 ### Problema que resolve
-LLMs são **stateless** — cada chamada à API é independente. Sem memória, o modelo esquece tudo entre mensagens.
+O endpoint `/api/chat` bloqueia até o modelo terminar de gerar a resposta inteira (pode levar 5-30 segundos). O usuário fica olhando para um loading sem feedback.
 
 ### Solução
-`InMemoryChatMemory` + `MessageChatMemoryAdvisor` do Spring AI.
-O advisor intercepta cada chamada, injeta o histórico no prompt e salva a nova troca automaticamente.
+`ChatClient.stream()` + `MediaType.TEXT_EVENT_STREAM_VALUE` (SSE) + `fetch()` com `ReadableStream` no frontend.
 
 ### Arquivos modificados
 
 | Arquivo | O que mudou |
 |---|---|
-| `ChatMemoryConfig.java` | **NOVO** — registra `InMemoryChatMemory` como bean |
-| `ChatService.java` | Migrou de `OllamaChatModel` para `ChatClient` + advisor |
-| `ChatRequest.java` | Adicionado campo `conversationId` |
-| `ChatResponse.java` | Adicionado campo `conversationId` na resposta |
-| `ChatController.java` | Novo endpoint `DELETE /{conversationId}` para limpar memória |
-| `app.js` | Frontend mantém o `conversationId` entre mensagens |
-| `pom.xml` | Adicionado `spring-ai-advisors-vector-store` |
+| `ChatService.java` | Adicionado método `chatStream()` que retorna `Flux<String>` |
+| `ChatController.java` | Novo endpoint `POST /api/chat/stream` que produz `text/event-stream` |
+| `app.js` | Usa `fetch()` + `ReadableStream` para consumir SSE |
+| `index.html` | Badge atualizado para `feat/03 · streaming` |
+| `pom.xml` | Adicionado `spring-boot-starter-webflux` |
 
 ---
 
-## 🧪 Testando a memória
+## 🧪 Testando o streaming
 
 ```bash
-# Mensagem 1 - apresentação
-curl -X POST http://localhost:8080/api/chat \
+# Veja os tokens chegando em tempo real no terminal!
+curl -N -X POST http://localhost:8080/api/chat/stream \
   -H "Content-Type: application/json" \
-  -d '{"message": "meu nome é Vagner", "conversationId": "sessao-teste"}'
+  -d '{"message": "explique o que é streaming em 3 parágrafos", "conversationId": "s1"}'
 
-# Mensagem 2 - teste de memória (mesmo conversationId)
-curl -X POST http://localhost:8080/api/chat \
-  -H "Content-Type: application/json" \
-  -d '{"message": "qual é o meu nome?", "conversationId": "sessao-teste"}'
-
-# Mensagem 3 - outra sessão (não deve saber o nome)
-curl -X POST http://localhost:8080/api/chat \
-  -H "Content-Type: application/json" \
-  -d '{"message": "qual é o meu nome?", "conversationId": "outra-sessao"}'
-
-# Limpar memória de uma sessão
-curl -X DELETE http://localhost:8080/api/chat/sessao-teste
+# A flag -N desativa o buffer do curl — você vê cada token conforme chega
 ```
 
 ---
 
-## 💡 Conceito: por que o modelo "lembra"?
+## 💡 Conceitos deste branch
 
-O modelo não guarda nada. O `MessageChatMemoryAdvisor` **reenvia o histórico completo** a cada nova mensagem:
+### Server-Sent Events (SSE)
+Protocolo HTTP unidirecional onde o servidor envia eventos para o cliente continuamente.
+Formato de cada evento: `data: conteúdo\n\n`
 
-```
-[system]: Você é um assistente Java...
-[user]:   meu nome é Vagner          ← histórico da msg anterior
-[assistant]: Olá Vagner! Como posso... ← resposta anterior
-[user]:   qual é o meu nome?         ← nova mensagem
-```
+### Project Reactor / Flux
+`Flux<T>` é um stream assíncrono reativo de N elementos.
+O Spring WebFlux sabe serializar um `Flux<String>` como SSE automaticamente.
 
-É por isso que o **context window** importa — quanto mais longo o histórico, mais tokens são consumidos.
+### ReadableStream (browser)
+`response.body` de um `fetch()` é um `ReadableStream`.
+O `reader.read()` retorna `{ done, value }` a cada chunk disponível.
 
 ---
 
 ## ➡️ Próximo passo
 
-`feat/03-streaming` — respostas aparecem token a token (efeito "digitando")
+`feat/04-rag-documentos` — conecte o assistente a documentos PDF/TXT via busca vetorial
