@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>AI HomeLab | Vagner — Streaming</title>
+    <title>AI HomeLab | Vagner — RAG</title>
     <link rel="stylesheet" href="style.css">
     <link href="https://fonts.googleapis.com/css2?family=Fira+Code:wght@300;400;500&family=Inter:wght@300;400;600&display=swap" rel="stylesheet">
 </head>
@@ -12,26 +12,43 @@
     <header>
         <div class="logo-container">
             <div class="status-indicator"></div>
-            <h1>HomeLab de IA <span class="vagner-tag">feat/03 · streaming</span></h1>
+            <h1>HomeLab de IA <span class="vagner-tag">feat/04 · rag</span></h1>
         </div>
         <div class="header-actions">
             <button id="clear-btn" class="clear-btn">↺ Nova conversa</button>
             <span class="system-time" id="system-time">00:00:00</span>
         </div>
     </header>
+
+    <!-- Painel de Upload de Documentos -->
+    <div class="upload-panel" id="upload-panel">
+        <div class="upload-area" id="upload-area">
+            <span class="upload-icon">📄</span>
+            <span class="upload-label">Arraste um arquivo ou <label for="file-input" class="file-link">clique aqui</label></span>
+            <span class="upload-sub">PDF, TXT, DOCX, HTML — max 10MB</span>
+            <input type="file" id="file-input" accept=".pdf,.txt,.docx,.html,.md" hidden>
+        </div>
+        <div class="upload-status" id="upload-status"></div>
+    </div>
+
     <div class="session-bar">
         <span class="label">SESSION ID:</span>
         <span id="session-id-display" class="session-id">—</span>
+        <span class="label" style="margin-left:1.5rem">DOCS INDEXADOS:</span>
+        <span id="docs-indexed" class="session-id">0</span>
     </div>
+
     <main id="chat-container">
         <div class="message ai-message">
-            <div class="bubble">Streaming ativo! As respostas aparecem token a token, igual ao ChatGPT.</div>
+            <div class="bubble">Olá! Sou o assistente RAG. Faça upload de um documento acima e depois me faça perguntas sobre ele. O documento de exemplo (Spring AI Overview) já foi carregado automaticamente!</div>
         </div>
     </main>
+
     <div class="loading-indicator" id="loading-indicator"><div class="dot-typing"></div></div>
+
     <footer>
         <form id="chat-form">
-            <input type="text" id="user-input" placeholder="Digite sua mensagem..." autocomplete="off">
+            <input type="text" id="user-input" placeholder="Pergunte sobre os documentos indexados..." autocomplete="off">
             <button type="submit" id="send-btn">
                 <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><line x1="22" y1="2" x2="11" y2="13"></line><polygon points="22 2 15 22 11 13 2 9 22 2"></polygon></svg>
             </button>
