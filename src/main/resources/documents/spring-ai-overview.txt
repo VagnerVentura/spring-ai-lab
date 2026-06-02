@@ -1,0 +1,55 @@
+Spring AI — Visão Geral e Conceitos Fundamentais
+
+O Spring AI é um framework da família Spring que facilita a integração de aplicações Java com modelos de linguagem de grande escala (LLMs). Ele oferece abstrações padronizadas para diferentes provedores de IA como OpenAI, Anthropic Claude, Google Gemini e modelos locais via Ollama, permitindo trocar de provedor sem reescrever o código da aplicação.
+
+== Componentes Principais ==
+
+ChatClient
+O ChatClient é a API fluente central do Spring AI. Ele permite construir chamadas ao modelo de forma encadeada usando métodos como .defaultSystem(), .user(), .advisors() e .call() ou .stream(). O ChatClient.Builder é injetado automaticamente pelo Spring Boot quando um starter de provedor está no classpath.
+
+ChatModel
+O ChatModel é a interface de baixo nível que representa a conexão direta com um modelo de linguagem. O ChatClient usa internamente um ChatModel. Para casos simples, você pode injetar o ChatModel diretamente e chamar chatModel.call(prompt).
+
+Prompt e Messages
+Um Prompt é um agrupamento de mensagens enviadas ao modelo. Existem três tipos principais de mensagem: SystemMessage (instrução de comportamento e persona para o modelo), UserMessage (mensagem enviada pelo usuário) e AssistantMessage (resposta anterior do modelo, usada para histórico).
+
+== RAG — Retrieval-Augmented Generation ==
+
+RAG é uma técnica que combina busca vetorial com geração de texto. Em vez de depender apenas do conhecimento treinado no modelo, o RAG recupera trechos relevantes de documentos externos e os injeta no prompt como contexto adicional. Isso permite que o modelo responda com informações específicas do seu domínio sem necessidade de fine-tuning.
+
+Pipeline de Ingestão (Indexing)
+A fase de ingestão transforma documentos em vetores armazenados num banco vetorial. As etapas são: (1) Load — leitura do arquivo com DocumentReader como TikaDocumentReader; (2) Split — divisão em chunks menores com TokenTextSplitter ou TextSplitter; (3) Embed — geração de embeddings (vetores numéricos) para cada chunk usando um EmbeddingModel; (4) Store — persistência dos vetores em um VectorStore como pgvector, Weaviate ou Chroma.
+
+Pipeline de Consulta (Query)
+Na consulta, a pergunta do usuário é transformada em vetor pelo mesmo modelo de embedding. O VectorStore encontra os chunks mais similares usando similaridade cosseno. Os chunks encontrados são injetados no prompt pelo QuestionAnswerAdvisor. O LLM gera a resposta baseada no contexto recuperado.
+
+QuestionAnswerAdvisor
+O QuestionAnswerAdvisor é um advisor do Spring AI que automatiza a fase de consulta do RAG. Ele recebe um SearchRequest com os parâmetros topK (quantos chunks retornar) e similarityThreshold (pontuação mínima de similaridade). É encadeado no ChatClient via .advisors().
+
+== Embeddings ==
+
+Embeddings são representações vetoriais de texto em espaço de alta dimensão. Textos semanticamente similares ficam próximos nesse espaço vetorial, permitindo busca por similaridade semântica e não apenas por palavras-chave. O Spring AI abstrai a geração de embeddings via a interface EmbeddingModel. No Ollama, o modelo nomic-embed-text gera vetores de 768 dimensões e é uma excelente opção gratuita e local.
+
+== VectorStore e pgvector ==
+
+VectorStore é a interface Spring AI para bancos de dados vetoriais. O pgvector é uma extensão do PostgreSQL que adiciona o tipo de dado VECTOR e operadores de similaridade. A tabela vector_store criada automaticamente pelo Spring AI armazena: id (UUID), content (texto do chunk), metadata (JSON com metadados), embedding (vetor de floats). O Spring AI suporta também Chroma, Weaviate, Pinecone, Redis, Qdrant e Milvus como alternativas ao pgvector.
+
+== Advisors ==
+
+Advisors são interceptores que envolvem as chamadas ao modelo. Eles seguem o padrão Chain of Responsibility. Os principais advisors do Spring AI são: MessageChatMemoryAdvisor (injeta histórico de conversa no prompt), QuestionAnswerAdvisor (injeta chunks recuperados do VectorStore), SafeGuardAdvisor (filtra conteúdo inapropriado) e LoggingAdvisor (loga todas as chamadas).
+
+== Streaming ==
+
+O Spring AI suporta streaming de respostas via Project Reactor. Usando .stream() em vez de .call() no ChatClient, você obtém um Flux<ChatResponse> onde cada elemento representa um fragmento de token gerado pelo modelo. No Spring MVC com WebFlux no classpath, endpoints que retornam Flux<String> com MediaType.TEXT_EVENT_STREAM_VALUE enviam Server-Sent Events automaticamente.
+
+== Memória de Conversa ==
+
+O Spring AI oferece ChatMemory para persistir o histórico de conversas. O InMemoryChatMemory armazena o histórico em um HashMap em memória RAM — simples para estudos mas perdido ao reiniciar. Para produção, existem implementações como CassandraChatMemory e JdbcChatMemory. O MessageChatMemoryAdvisor usa o ChatMemory para injetar automaticamente as mensagens anteriores no prompt, dando ao modelo a ilusão de memória contínua.
+
+== Modelos Suportados ==
+
+O Spring AI suporta via starters: OpenAI (GPT-4o, GPT-4-turbo), Anthropic (Claude 3.5 Sonnet, Claude 3.5 Haiku), Google (Gemini 1.5 Pro, Gemini 1.5 Flash), Ollama (Llama3, Mistral, Qwen2.5, Gemma2, nomic-embed-text), Amazon Bedrock, Azure OpenAI, Mistral AI, e outros. A troca de provedor exige apenas mudar o starter no pom.xml e as propriedades no application.properties.
+
+== Boas Práticas ==
+
+Sempre use modelos de embedding diferentes dos modelos de chat. Defina um similarityThreshold adequado (entre 0.4 e 0.7 geralmente funciona bem). Adicione metadados nos documentos durante a ingestão para facilitar rastreabilidade e filtragem. Use chunk overlap para evitar perda de contexto nas bordas dos chunks. Para portfólio, documente no README qual modelo de embedding foi usado, as dimensões do vetor e o VectorStore escolhido.
