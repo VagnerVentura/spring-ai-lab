@@ -6,6 +6,7 @@ import org.springframework.ai.chat.client.ChatClient;
 import org.springframework.ai.chat.client.advisor.MessageChatMemoryAdvisor;
 import org.springframework.ai.chat.client.advisor.api.Advisor;
 import org.springframework.ai.chat.client.advisor.vectorstore.QuestionAnswerAdvisor;
+import org.springframework.ai.chat.client.advisor.vectorstore.VectorStoreChatMemoryAdvisor;
 import org.springframework.ai.chat.memory.ChatMemory;
 import org.springframework.ai.chat.model.ChatResponse;
 import org.springframework.ai.vectorstore.SearchRequest;
@@ -113,12 +114,13 @@ public class RagChatService {
                         .order(10)
                         .build();
 
-       return new Advisor[]{questionAnswerAdvisor,messageChatMemoryAdvisor};//
-//                      Se você quer que o Histórico de Conversa seja buscado no VectorStore
-//                        VectorStoreChatMemoryAdvisor.builder(vectorStore)
-//                                .defaultTopK(topK)
-//                                .conversationId(conversationId)
-//                                .build()
+//TODO Se você quer que o Histórico de Conversa seja buscado no VectorStore
+        var vectorStoreChatMemoryAdvisor = VectorStoreChatMemoryAdvisor.builder(vectorStore)
+                                .defaultTopK(topK)
+                                .conversationId(conversationId)
+                                .build();
+
+        return new Advisor[]{questionAnswerAdvisor,messageChatMemoryAdvisor, vectorStoreChatMemoryAdvisor};//
     }
 
     /**
