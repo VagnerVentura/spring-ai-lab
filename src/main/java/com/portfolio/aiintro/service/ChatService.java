@@ -79,6 +79,7 @@ public class ChatService {
                 //                                              windowSize=20: mantém as
                 //                                              últimas 20 mensagens no contexto
                 //                                              Ajuste conforme o context window
+                //                                              Ajuste conforme o context window
                 //                                              do seu modelo
                 .call()
                 .chatResponse();

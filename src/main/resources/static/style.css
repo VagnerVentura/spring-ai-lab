@@ -63,3 +63,40 @@ button[type="submit"] svg { width: 20px; height: 20px; }
   100% { box-shadow: 9984px 0 0 0 var(--text-secondary),9999px 0 0 0 var(--text-secondary),10014px 0 0 0 var(--text-secondary); }
 }
 @media (max-width: 600px) { .meta-bar { flex-direction: column; gap: 0.5rem; } }
+
+/* ── Upload Panel ──────────────────────────────────────── */
+.upload-panel {
+    padding: 0.75rem 1.5rem;
+    background: #0d1117;
+    border-bottom: 1px solid var(--border-color);
+}
+.upload-area {
+    border: 1px dashed var(--border-color);
+    border-radius: 8px;
+    padding: 0.75rem 1.5rem;
+    display: flex;
+    align-items: center;
+    gap: 0.75rem;
+    cursor: pointer;
+    transition: border-color 0.2s, background 0.2s;
+    font-size: 0.85rem;
+    color: var(--text-secondary);
+}
+.upload-area:hover, .upload-area.drag-over {
+    border-color: var(--accent-color);
+    background: rgba(35,134,54,0.05);
+    color: var(--text-primary);
+}
+.upload-icon { font-size: 1.2rem; }
+.file-link { color: var(--accent-color); cursor: pointer; text-decoration: underline; }
+.upload-sub { font-size: 0.75rem; margin-left: auto; font-family: var(--font-mono); }
+.upload-status {
+    font-family: var(--font-mono);
+    font-size: 0.78rem;
+    margin-top: 0.4rem;
+    min-height: 1.2rem;
+    color: var(--text-secondary);
+}
+.upload-status.success { color: #238636; }
+.upload-status.error   { color: #f85149; }
+.upload-status.loading { color: #e3b341; }
