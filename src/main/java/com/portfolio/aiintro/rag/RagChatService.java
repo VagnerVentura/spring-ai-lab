@@ -4,7 +4,8 @@ import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.ai.chat.client.ChatClient;
 import org.springframework.ai.chat.client.advisor.MessageChatMemoryAdvisor;
-import org.springframework.ai.chat.client.advisor.QuestionAnswerAdvisor;
+import org.springframework.ai.chat.client.advisor.api.Advisor;
+import org.springframework.ai.chat.client.advisor.vectorstore.QuestionAnswerAdvisor;
 import org.springframework.ai.chat.memory.ChatMemory;
 import org.springframework.ai.chat.model.ChatResponse;
 import org.springframework.ai.vectorstore.SearchRequest;
@@ -12,6 +13,9 @@ import org.springframework.ai.vectorstore.VectorStore;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.stereotype.Service;
 import reactor.core.publisher.Flux;
+
+import java.util.ArrayList;
+import java.util.List;
 
 /**
  * ╔══════════════════════════════════════════════════════════════════╗
@@ -85,26 +89,36 @@ public class RagChatService {
      * @param conversationId ID da sessão para memória
      */
     public ChatResponse ask(String question, String conversationId) {
-        log.debug("RAG query — topK={}, conversationId={}", topK, conversationId);
+        log.debug("RAG query – topK={}, conversationId={}", topK, conversationId);
 
         return chatClient.prompt()
                 .user(question)
-                .advisors(
-                        // ── Advisor 1: RAG ───────────────────────────
-                        // SearchRequest define quantos chunks buscar (topK)
-                        // e o threshold mínimo de similaridade (0.0 a 1.0)
-                        new QuestionAnswerAdvisor(
-                                vectorStore,
-                                SearchRequest.builder()
-                                        .topK(topK)
-                                        .similarityThreshold(0.5) // ignora chunks pouco relevantes
-                                        .build()
-                        ),
-                        // ── Advisor 2: Memória ───────────────────────
-                        new MessageChatMemoryAdvisor(chatMemory, conversationId, 10)
-                )
+                .advisors(injectAdvisors(conversationId))
                 .call()
                 .chatResponse();
+    }
+
+    private Advisor[] injectAdvisors(String conversationId) {
+        // Advisor 1: RAG clássico de documentos (Aceita o 'new' pois tem construtor público customizado no Builder)
+       var questionAnswerAdvisor = QuestionAnswerAdvisor.builder(vectorStore)
+               .searchRequest(SearchRequest.builder()
+                        .topK(topK)
+                        .similarityThreshold(0.5)
+                        .build())
+               .build();
+
+       // Advisor 2: Memória curta/normal da conversa atual
+       var messageChatMemoryAdvisor = MessageChatMemoryAdvisor.builder(chatMemory)
+                        .conversationId(conversationId)
+                        .order(10)
+                        .build();
+
+       return new Advisor[]{questionAnswerAdvisor,messageChatMemoryAdvisor};//
+//                      Se você quer que o Histórico de Conversa seja buscado no VectorStore
+//                        VectorStoreChatMemoryAdvisor.builder(vectorStore)
+//                                .defaultTopK(topK)
+//                                .conversationId(conversationId)
+//                                .build()
     }
 
     /**
@@ -114,23 +128,9 @@ public class RagChatService {
     public Flux<String> askStream(String question, String conversationId) {
         return chatClient.prompt()
                 .user(question)
-                .advisors(
-                        new QuestionAnswerAdvisor(
-                                vectorStore,
-                                SearchRequest.builder()
-                                        .topK(topK)
-                                        .similarityThreshold(0.5)
-                                        .build()
-                        ),
-                        new MessageChatMemoryAdvisor(chatMemory, conversationId, 10)
-                )
+                .advisors(injectAdvisors(conversationId))
                 .stream()
-                .chatResponse()
-                .map(r -> {
-                    var text = r.getResult().getOutput().getText();
-                    return text != null ? text : "";
-                })
-                .filter(t -> !t.isEmpty());
+                .content();
     }
 
     /**
